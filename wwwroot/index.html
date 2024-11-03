@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загрузка строк</title>
+    <style>
+        #progress {
+            width: 100%;
+            background-color: #f3f3f3;
+        }
+
+        #progress-bar {
+            width: 0;
+            height: 30px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Загрузка строк из файла</h1>
+    <input type="file" id="fileInput" accept=".txt">
+    <button id="uploadButton">Загрузить</button>
+    <div id="progress">
+        <div id="progress-bar">0%</div>
+    </div>
+    <div id="status"></div>
+
+    <script>
+        const BATCH_SIZE = 100;
+
+        document.getElementById('uploadButton').addEventListener('click', async () => {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) {
+                alert('Пожалуйста, выберите файл.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const text = await file.text();
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            const totalLines = lines.length;
+
+            let processedLines = 0;
+
+            while (processedLines < totalLines) {
+                const batch = lines.slice(processedLines, processedLines + BATCH_SIZE);
+                await sendBatch(batch);
+                processedLines += batch.length;
+                updateProgress(processedLines, totalLines);
+            }
+        });
+
+        async function sendBatch(batch) {
+            try {
+                await fetch('http://localhost:5157/api/RandomData/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ RandomDataRows : batch }),
+                });
+            } catch (error) {
+                console.error('Ошибка при отправке пакета:', error);
+            }
+        }
+
+        function updateProgress(current, total) {
+            const progressBar = document.getElementById('progress-bar');
+            const percentage = (current / total) * 100;
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = Math.round(percentage) + '%';
+
+            const status = document.getElementById('status');
+            status.textContent = `Загружено: ${current} строк, Осталось: ${total - current} строк`;
+        }
+    </script>
+</body>
+</html>
